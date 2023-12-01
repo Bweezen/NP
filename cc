@@ -83,108 +83,74 @@ return 0;
  
 MULTICASTTTTTTTTTTTTTTTT
  
-Sending multicast datagrams:
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <stdio.h>
-#include <stdlib.h>
-
-struct in_addr localInterface;
-struct sockaddr_in groupSock;
-int sd;
-int datalen;
-char databuf[1024];
-
-int main(int argc, char *argv[]) {
-    sd = socket(AF_INET, SOCK_DGRAM, 0);
-    if (sd < 0) {
-        perror("opening datagram socket");
-        exit(1);
-    }
-
-    memset((char *)&groupSock, 0, sizeof(groupSock));
-    groupSock.sin_family = AF_INET;
-    groupSock.sin_addr.s_addr = inet_addr("225.1.1.1");
-    groupSock.sin_port = htons(5555);
-
-    char loopch = 0;
-    if (setsockopt(sd, IPPROTO_IP, IP_MULTICAST_LOOP, (char *)&loopch, sizeof(loopch)) < 0) {
-        perror("setting IP_MULTICAST_LOOP:");
-        close(sd);
-        exit(1);
-    }
-
-    localInterface.s_addr = inet_addr("9.5.1.1");
-    if (setsockopt(sd, IPPROTO_IP, IP_MULTICAST_IF, (char *)&localInterface, sizeof(localInterface)) < 0) {
-        perror("setting local interface");
-        exit(1);
-    }
-
-    datalen = 10;
-    if (sendto(sd, databuf, datalen, 0, (struct sockaddr *)&groupSock, sizeof(groupSock)) < 0) {
-        perror("sending datagram message");
-    }
-
-    return 0;
+#include<stdio.h>
+#include<sys/socket.h>
+#include<netdb.h>
+#include<string.h>
+#include<unistd.h>
+#include<arpa/inet.h>
+int main(){
+ 
+	int sock,b=1;
+	char str[100],str2[10];
+	struct sockaddr_in serv;
+	sock=socket(AF_INET,SOCK_DGRAM,0);
+	//setsockopt(sock,SOL_SOCKET,SO_BROADCAST,&b,sizeof(b));
+	bzero(&serv,sizeof(serv));
+	serv.sin_family=AF_INET;
+	serv.sin_port=htons(12345);
+	serv.sin_addr.s_addr = inet_addr("227.0.0.3");
+	struct ip_mreq mreq;
+	mreq.imr_multiaddr.s_addr=inet_addr("227.0.0.3");
+	mreq.imr_interface.s_addr=INADDR_ANY;
+	setsockopt(sock,IPPROTO_IP,IP_ADD_MEMBERSHIP,&mreq,sizeof(mreq));
+	while(1){
+ 
+		printf("Do you want to broadcast?");
+		fgets(str2,10,stdin);
+		if(strncmp(str2,"yes",3)==0)
+		{	printf("Enter the Message");
+			fgets(str,10,stdin);
+			sendto(sock,str,strlen(str),0,(struct sockaddr *)&serv,sizeof(serv));
+		}
+else
+{
+break;
 }
-
-
-RECEIVING : 
-
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <stdio.h>
-#include <stdlib.h>
-
-struct sockaddr_in localSock;
-struct ip_mreq group;
-int sd;
-int datalen;
-char databuf[1024];
-
-int main(int argc, char *argv[]) {
-    sd = socket(AF_INET, SOCK_DGRAM, 0);
-    if (sd < 0) {
-        perror("opening datagram socket");
-        exit(1);
-    }
-
-    int reuse = 1;
-    if (setsockopt(sd, SOL_SOCKET, SO_REUSEADDR, (char *)&reuse, sizeof(reuse)) < 0) {
-        perror("setting SO_REUSEADDR");
-        close(sd);
-        exit(1);
-    }
-
-    memset((char *)&localSock, 0, sizeof(localSock));
-    localSock.sin_family = AF_INET;
-    localSock.sin_port = htons(5555);
-    localSock.sin_addr.s_addr = INADDR_ANY;
-
-    if (bind(sd, (struct sockaddr *)&localSock, sizeof(localSock))) {
-        perror("binding datagram socket");
-        close(sd);
-        exit(1);
-    }
-
-    group.imr_multiaddr.s_addr = inet_addr("225.1.1.1");
-    group.imr_interface.s_addr = inet_addr("9.5.1.1");
-    if (setsockopt(sd, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char *)&group, sizeof(group)) < 0) {
-        perror("adding multicast group");
-        close(sd);
-        exit(1);
-    }
-
-    datalen = sizeof(databuf);
-    if (read(sd, databuf, datalen) < 0) {
-        perror("reading datagram message");
-        close(sd);
-        exit(1);
-    }
-
-    return 0;
+}
+close(sock);
+}
+ 
+ 
+ 
+ 
+#include<stdio.h>
+#include<netdb.h>
+#include<unistd.h>
+#include<sys/socket.h>
+#include<arpa/inet.h>
+#include<string.h>
+int main()
+{
+int sock,r=1;
+char str[100];
+struct sockaddr_in serv;
+bzero(&serv,sizeof(serv));
+sock=socket(AF_INET,SOCK_DGRAM,0);
+setsockopt(sock,SOL_SOCKET,SO_REUSEADDR,&r,sizeof(r));
+serv.sin_port=htons(12345);
+serv.sin_family=AF_INET;
+serv.sin_addr.s_addr=INADDR_ANY;
+bind(sock,(struct sockaddr*)&serv , sizeof(serv));
+struct ip_mreq mreq;
+mreq.imr_multiaddr.s_addr=inet_addr("227.0.0.3");
+mreq.imr_interface.s_addr=INADDR_ANY;
+setsockopt(sock,IPPROTO_IP,IP_ADD_MEMBERSHIP,&mreq,sizeof(mreq));
+while(1)
+{
+bzero(str,100);
+recvfrom(sock,str,100,0,NULL,NULL);
+printf("Received data is : %s ",str);
+}
+close(sock);
 }
